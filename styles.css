@@ -1,0 +1,215 @@
+/* Sidebar Container */
+#chatgpt-outline-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  /* Increased default width */
+  height: 100vh;
+  background-color: #f9f9f9;
+  border-left: 1px solid #e5e5e5;
+  overflow-y: auto;
+  z-index: 2147483647;
+  padding: 20px;
+  box-sizing: border-box;
+  font-family: 'Söhne', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  color: #0d0d0d;
+  /* Removed transition for width/padding to make resizing smooth, or we can handle it in JS */
+  transition: transform 0.3s ease;
+}
+
+#chatgpt-outline-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  /* Slightly wider for easier clicking */
+  height: 100%;
+  cursor: col-resize;
+  background-color: transparent;
+  z-index: 2147483648;
+  transition: background-color 0.2s;
+}
+
+#chatgpt-outline-resizer:hover,
+#chatgpt-outline-resizer.resizing {
+  background-color: rgba(74, 144, 226, 0.5);
+  /* Semi-transparent blue */
+}
+
+/* Shift the main content when sidebar is open */
+body.chatgpt-outline-open {
+  padding-right: 300px;
+  /* Default, will be overridden by JS */
+  /* transition: padding-right 0.3s ease; Removed for smooth resizing */
+}
+
+body {
+  /* transition: padding-right 0.3s ease; Removed for smooth resizing */
+}
+
+#chatgpt-outline-sidebar.collapsed {
+  transform: translateX(100%);
+  width: 0;
+  padding: 0;
+  border: none;
+}
+
+/* Floating Expand Button */
+#chatgpt-outline-expand-btn {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  /* transform: translateY(-50%); Removed to avoid conflict with drag logic setting top */
+  width: 32px;
+  /* Wider */
+  height: 64px;
+  /* Taller */
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  cursor: grab;
+  /* Indicate draggable */
+  z-index: 2147483647 !important;
+  /* Force top */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
+  color: #555;
+}
+
+#chatgpt-outline-expand-btn:hover {
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+.dark #chatgpt-outline-expand-btn {
+  background-color: #202123;
+  border-color: #4d4d4f;
+  color: #ececec;
+}
+
+.dark #chatgpt-outline-expand-btn:hover {
+  background-color: #2f2f2f;
+  color: #fff;
+}
+
+#chatgpt-outline-expand-btn:active {
+  cursor: grabbing;
+}
+
+/* Close Button inside Sidebar */
+#chatgpt-outline-close-btn {
+  float: right;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+#chatgpt-outline-close-btn:hover {
+  background-color: #ececec;
+  color: #0d0d0d;
+}
+
+.dark #chatgpt-outline-close-btn {
+  color: #a0a0a0;
+}
+
+.dark #chatgpt-outline-close-btn:hover {
+  background-color: #2f2f2f;
+  color: #ececec;
+}
+
+/* Hide expand button when sidebar is open */
+body.chatgpt-outline-open #chatgpt-outline-expand-btn {
+  display: none;
+}
+
+/* Dark mode support (basic heuristic, can be improved) */
+@media (prefers-color-scheme: dark) {
+  #chatgpt-outline-sidebar {
+    background-color: #171717;
+    border-left: 1px solid #2f2f2f;
+    color: #ececec;
+  }
+}
+
+/* When ChatGPT is in dark mode (often indicated by a class on body or html) */
+.dark #chatgpt-outline-sidebar {
+  background-color: #171717;
+  border-left: 1px solid #2f2f2f;
+  color: #ececec;
+}
+
+
+#chatgpt-outline-sidebar h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.dark #chatgpt-outline-sidebar h2 {
+  border-bottom: 1px solid #2f2f2f;
+}
+
+.qa-group {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.dark .qa-group {
+  border-bottom: 1px solid #2f2f2f;
+}
+
+.qa-group:last-child {
+  border-bottom: none;
+}
+
+.outline-item {
+  padding: 4px 8px;
+  /* Reduced padding */
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: background-color 0.2s;
+}
+
+.outline-item:hover {
+  background-color: #ececec;
+}
+
+.dark .outline-item:hover {
+  background-color: #2f2f2f;
+}
+
+.outline-item.user-msg {
+  font-weight: 600;
+  color: #0d0d0d;
+  margin-bottom: 2px;
+  /* Compact */
+}
+
+.dark .outline-item.user-msg {
+  color: #ececec;
+}
+
+.outline-item.assistant-msg {
+  color: #666;
+  font-size: 13px;
+  padding-left: 12px;
+  /* Indent */
+}
+
+.dark .outline-item.assistant-msg {
+  color: #a0a0a0;
+}
