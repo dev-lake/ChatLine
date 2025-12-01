@@ -15,6 +15,7 @@ A Chrome extension that generates a navigable outline for your ChatGPT conversat
     - When collapsed, a floating button appears on the right.
     - **Draggable**: You can drag the floating button up and down to your preferred position.
 - **Dark Mode Support**: Automatically adapts to ChatGPT's dark mode.
+- **Multi-site Support**: Works on ChatGPT and DeepSeek (handles DeepSeek-specific DOM).
 
 ## Installation
 
@@ -27,14 +28,20 @@ A Chrome extension that generates a navigable outline for your ChatGPT conversat
 
 ## Usage
 
-1.  Open a conversation on [ChatGPT](https://chatgpt.com).
+1.  Open a conversation on [ChatGPT](https://chatgpt.com) or [DeepSeek](https://chat.deepseek.com).
 2.  The outline sidebar will appear on the right.
 3.  **Resize**: Hover over the left border of the sidebar until the cursor changes, then drag.
 4.  **Collapse**: Click the close button or the resize border.
 5.  **Expand**: Click the floating chevron button on the right edge of the screen.
 6.  **Move Button**: Click and drag the floating expand button to move it vertically.
 
+## Troubleshooting
+
+- Sidebar overlaps messages: drag the sidebar once to refresh layout; the main chat area should shrink to `100% - sidebar width`. If not, refresh the page.
+- Outline empty on DeepSeek: ensure the page is fully loaded; we target `.ds-message` and `.ds-markdown` elements. Refresh if the conversation was opened before installing the extension.
+
 ## Permissions
 
 - `activeTab`: To access the content of the current tab for parsing messages.
 - `https://chatgpt.com/*`, `https://chat.openai.com/*`: To run on ChatGPT domains.
+- `https://chat.deepseek.com/*`: To run on DeepSeek.
