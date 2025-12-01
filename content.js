@@ -66,7 +66,7 @@
       if (width > 200 && width < 800) { // Min/Max constraints
         sidebar.style.width = `${width}px`;
         if (document.body.classList.contains('chatgpt-outline-open')) {
-          document.body.style.paddingRight = `${width}px`;
+          setContentPadding(`${width}px`);
         }
       }
     });
@@ -81,7 +81,7 @@
         if (isClick) {
           sidebar.classList.add('collapsed');
           document.body.classList.remove('chatgpt-outline-open');
-          document.body.style.paddingRight = '';
+          setContentPadding('');
 
           const expandBtn = document.getElementById('chatgpt-outline-expand-btn');
           if (expandBtn) expandBtn.style.display = 'flex';
@@ -152,7 +152,7 @@
 
           // Restore width
           const currentWidth = sidebar.offsetWidth || 300;
-          document.body.style.paddingRight = `${currentWidth}px`;
+          setContentPadding(`${currentWidth}px`);
 
           expandBtn.style.display = 'none';
         }
@@ -166,11 +166,13 @@
     // Initialize state
     if (!sidebar.classList.contains('collapsed')) {
       document.body.classList.add('chatgpt-outline-open');
+      setContentPadding(`${sidebar.offsetWidth || 300}px`);
       expandBtn.style.display = 'none';
     } else {
       expandBtn.style.display = 'flex';
       // Ensure body doesn't have the open class
       document.body.classList.remove('chatgpt-outline-open');
+      setContentPadding('');
     }
   }
 
@@ -181,29 +183,16 @@
 
     listContainer.innerHTML = ''; // Clear current list
 
-    // Selectors for ChatGPT messages
-    const articles = document.querySelectorAll('article');
+    const messageNodes = getMessageElements();
 
     let currentGroup = null;
 
-    articles.forEach((article, index) => {
-      // Try to determine if it's user or assistant
-      const isUser = article.querySelector('[data-message-author-role="user"]');
-      const isAssistant = article.querySelector('[data-message-author-role="assistant"]');
-
-      let role = 'unknown';
-      if (isUser) role = 'user';
-      else if (isAssistant) role = 'assistant';
-
+    messageNodes.forEach((node, index) => {
+      const role = resolveRole(node, index);
       if (role === 'unknown') return;
 
       // Extract text preview
-      let text = '...';
-      const contentDiv = article.querySelector('.markdown') || article.querySelector('.whitespace-pre-wrap');
-      if (contentDiv) {
-        text = contentDiv.textContent.trim().substring(0, 60);
-        if (contentDiv.textContent.length > 60) text += '...';
-      }
+      const text = extractPreview(node);
 
       // Logic for grouping:
       // If it's a User message, start a new group.
@@ -232,11 +221,108 @@
 
       // Click to scroll
       item.addEventListener('click', () => {
-        article.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
 
       currentGroup.appendChild(item);
     });
+  }
+
+  // Collect message-like elements across supported sites (ChatGPT + DeepSeek)
+  function getMessageElements() {
+    const baseSelectors = [
+      'article',
+      '[data-message-author-role]',
+      '[data-role="message"]',
+      '[data-role="chat-message"]',
+      '[data-msg-role]',
+      '[data-chat-role]',
+      '.chat-message',
+      '.conversation-message',
+      '.ds-chat-message',
+      '[class*="chat-message"]',
+      '[class*="conversation-item"]'
+    ];
+
+    const deepseekSelectors = [
+      '.ds-message',
+      '[data-testid="chatMessage"]',
+      '.ds-markdown'
+    ];
+
+    const selectors = location.hostname.includes('deepseek')
+      ? baseSelectors.concat(deepseekSelectors)
+      : baseSelectors;
+
+    const raw = selectors.flatMap((sel) => Array.from(document.querySelectorAll(sel)));
+
+    // Deduplicate: keep outermost message containers (e.g., .ds-message over inner .ds-markdown)
+    const unique = [];
+    raw.forEach((node) => {
+      if (!node) return;
+      if (unique.includes(node)) return;
+      unique.push(node);
+    });
+
+    const filtered = unique.filter(
+      (node) => !unique.some((other) => other !== node && other.contains(node))
+    );
+
+    filtered.sort((a, b) => {
+      const pos = a.compareDocumentPosition(b);
+      if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+      return 0;
+    });
+
+    return filtered;
+  }
+
+  function resolveRole(node, index) {
+    const attrRole =
+      node.getAttribute('data-message-author-role') ||
+      node.getAttribute('data-role') ||
+      node.getAttribute('data-msg-role') ||
+      node.getAttribute('data-chat-role');
+
+    const isDeepseek = location.hostname.includes('deepseek');
+    if (isDeepseek && node.classList?.contains('ds-message')) {
+      return node.querySelector('.ds-markdown') ? 'assistant' : 'user';
+    }
+
+    if (attrRole) {
+      const val = attrRole.toLowerCase();
+      if (val.includes('user')) return 'user';
+      if (val.includes('assistant') || val.includes('bot')) return 'assistant';
+    }
+
+    const className = (node.className || '').toString().toLowerCase();
+    if (className.includes('user')) return 'user';
+    if (className.includes('assistant') || className.includes('bot')) return 'assistant';
+
+    // DeepSeek: assistant messages often contain markdown blocks
+    if (node.querySelector('.ds-markdown, .markdown')) return 'assistant';
+
+    // Fallback: assume alternating user / assistant starting with user
+    return index % 2 === 0 ? 'user' : 'assistant';
+  }
+
+  function extractPreview(node) {
+    let text = '...';
+    const contentNode =
+      node.querySelector(
+        '.markdown, .whitespace-pre-wrap, .ds-markdown, .message-content, .fbb737a4'
+      ) || node;
+
+    if (contentNode) {
+      const contentText = contentNode.textContent.trim();
+      if (contentText) {
+        text = contentText.substring(0, 60);
+        if (contentText.length > 60) text += '...';
+      }
+    }
+
+    return text;
   }
 
   // Debounced scan to avoid performance hit on every mutation
@@ -272,6 +358,73 @@
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
+  }
+
+  function setContentPadding(value) {
+    const widthVal = value || '';
+    const messageWidthVal = widthVal ? `calc(100% - ${widthVal})` : '';
+    const isDeepseek = location.hostname.includes('deepseek');
+
+    const candidates = [
+      document.body,
+      document.getElementById('root'),
+      document.querySelector('main'),
+      document.querySelector('[role="main"]'),
+      document.querySelector('.conversation-container'),
+      document.querySelector('.chat-body')
+    ].filter(Boolean);
+
+    const structural = [
+      document.querySelector('#root > div'),
+      document.querySelector('#root > div > div')
+    ].filter(Boolean);
+
+    candidates.forEach((el) => {
+      el.style.paddingRight = widthVal;
+      el.style.marginRight = widthVal;
+    });
+
+    const setWidths = (els) => {
+      els.forEach((el) => {
+        if (widthVal) {
+          el.style.width = messageWidthVal;
+          el.style.maxWidth = messageWidthVal;
+          el.style.boxSizing = 'border-box';
+        } else {
+          el.style.width = '';
+          el.style.maxWidth = '';
+          el.style.boxSizing = '';
+        }
+      });
+    };
+
+    setWidths(structural);
+
+    if (isDeepseek) {
+      const deepseekContainers = [
+        document.querySelector('[class*="ds-theme"]'),
+        document.querySelector('[class*="ds-theme"] > div'),
+        document.querySelector('[class*="ds-theme"] > div > div')
+      ].filter(Boolean);
+
+      setWidths(deepseekContainers);
+    }
+
+    document.documentElement.style.setProperty('--chatgpt-outline-width', widthVal);
+    document.documentElement.style.setProperty('--message-area-width', messageWidthVal);
+    document.body.style.setProperty('--chatgpt-outline-width', widthVal);
+
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.setProperty('--chatgpt-outline-width', widthVal);
+      root.style.setProperty('--message-area-width', messageWidthVal);
+    }
+
+    const mainEl = document.querySelector('main') || document.querySelector('[role="main"]');
+    if (mainEl) {
+      mainEl.style.setProperty('--chatgpt-outline-width', widthVal);
+      mainEl.style.setProperty('--message-area-width', messageWidthVal);
+    }
   }
 
 })();
