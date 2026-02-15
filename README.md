@@ -42,6 +42,18 @@ A Chrome extension that generates a navigable outline for your ChatGPT conversat
 
 ## Permissions
 
-- `activeTab`: To access the content of the current tab for parsing messages.
+This extension requires access to the following domains to inject the outline sidebar:
 - `https://chatgpt.com/*`, `https://chat.openai.com/*`: To run on ChatGPT domains.
 - `https://chat.deepseek.com/*`: To run on DeepSeek.
+
+## Privacy Policy
+
+This extension does not collect, store, or transmit any personal data or user information.
+
+- All processing happens locally in your browser
+- No data is sent to external servers
+- No analytics or tracking tools are used
+- No user data is stored or logged
+- The extension only reads and modifies the visual layout of supported chat websites
+
+Last updated: 2026-02-15
