@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Generate Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .icon-container {
+            display: inline-block;
+            margin: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background: white;
+            display: block;
+            margin: 10px auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #357ae8;
+        }
+    </style>
+</head>
+<body>
+    <h1>ChatGPT Outline Extension Icons</h1>
+    <p>Click the buttons below to download each icon size:</p>
+
+    <div class="icon-container">
+        <canvas id="icon16" width="16" height="16"></canvas>
+        <button onclick="downloadIcon('icon16', 'icon16.png')">Download 16x16</button>
+    </div>
+
+    <div class="icon-container">
+        <canvas id="icon48" width="48" height="48"></canvas>
+        <button onclick="downloadIcon('icon48', 'icon48.png')">Download 48x48</button>
+    </div>
+
+    <div class="icon-container">
+        <canvas id="icon128" width="128" height="128"></canvas>
+        <button onclick="downloadIcon('icon128', 'icon128.png')">Download 128x128</button>
+    </div>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const scale = size / 128; // Base design on 128x128
+
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#4285f4');
+            gradient.addColorStop(1, '#34a853');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw outline/list icon
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = Math.max(2, 3 * scale);
+            ctx.lineCap = 'round';
+
+            // Calculate positions
+            const padding = 20 * scale;
+            const lineHeight = 18 * scale;
+            const dotSize = 6 * scale;
+            const dotMargin = 12 * scale;
+
+            // Draw three list items
+            for (let i = 0; i < 3; i++) {
+                const y = padding + (i * lineHeight * 2);
+
+                // Draw dot
+                ctx.beginPath();
+                ctx.arc(padding + dotSize, y + dotSize, dotSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw line
+                ctx.beginPath();
+                ctx.moveTo(padding + dotSize * 2 + dotMargin, y + dotSize);
+                ctx.lineTo(size - padding, y + dotSize);
+                ctx.stroke();
+            }
+        }
+
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Draw all icons on page load
+        window.onload = function() {
+            drawIcon(document.getElementById('icon16'));
+            drawIcon(document.getElementById('icon48'));
+            drawIcon(document.getElementById('icon128'));
+        };
+    </script>
+</body>
+</html>

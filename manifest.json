@@ -3,6 +3,11 @@
   "name": "ChatGPT Outline",
   "version": "1.0",
   "description": "Displays an outline of the conversation on the right side of the ChatGPT interface.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "permissions": [
     "activeTab"
   ],
