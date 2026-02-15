@@ -37,15 +37,13 @@
   /* Semi-transparent blue */
 }
 
-/* Shift the main content when sidebar is open */
+/* Floating sidebar - no content shifting */
 body.chatgpt-outline-open {
-  padding-right: 300px;
-  /* Default, will be overridden by JS */
-  /* transition: padding-right 0.3s ease; Removed for smooth resizing */
+  /* Sidebar now floats over content without shifting layout */
 }
 
 body {
-  /* transition: padding-right 0.3s ease; Removed for smooth resizing */
+  /* No transitions needed for floating sidebar */
 }
 
 #chatgpt-outline-sidebar.collapsed {
@@ -162,12 +160,23 @@ body.chatgpt-outline-open #chatgpt-outline-expand-btn {
 
 .qa-group {
   margin-bottom: 12px;
-  padding-bottom: 12px;
+  padding: 8px;
   border-bottom: 1px solid #e5e5e5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.qa-group:hover {
+  background-color: #ececec;
 }
 
 .dark .qa-group {
   border-bottom: 1px solid #2f2f2f;
+}
+
+.dark .qa-group:hover {
+  background-color: #2f2f2f;
 }
 
 .qa-group:last-child {
@@ -178,18 +187,8 @@ body.chatgpt-outline-open #chatgpt-outline-expand-btn {
   padding: 4px 8px;
   /* Reduced padding */
   border-radius: 6px;
-  cursor: pointer;
   font-size: 14px;
   line-height: 1.4;
-  transition: background-color 0.2s;
-}
-
-.outline-item:hover {
-  background-color: #ececec;
-}
-
-.dark .outline-item:hover {
-  background-color: #2f2f2f;
 }
 
 .outline-item.user-msg {

@@ -76,16 +76,6 @@
         isResizing = false;
         resizer.classList.remove('resizing');
         document.body.style.cursor = '';
-
-        // Handle Click to Collapse
-        if (isClick) {
-          sidebar.classList.add('collapsed');
-          document.body.classList.remove('chatgpt-outline-open');
-          setContentPadding('');
-
-          const expandBtn = document.getElementById('chatgpt-outline-expand-btn');
-          if (expandBtn) expandBtn.style.display = 'flex';
-        }
       }
     });
 
@@ -98,20 +88,40 @@
     expandBtn.style.top = '50%';
     expandBtn.style.transform = 'translateY(-50%)'; // Center it initially
 
-    // Drag Logic for Expand Button
+    // Hover to expand
+    let hoverTimer = null;
+
+    expandBtn.addEventListener('mouseenter', () => {
+      // Small delay to avoid accidental triggers
+      hoverTimer = setTimeout(() => {
+        sidebar.classList.remove('collapsed');
+        document.body.classList.add('chatgpt-outline-open');
+        expandBtn.style.display = 'none';
+      }, 200);
+    });
+
+    expandBtn.addEventListener('mouseleave', () => {
+      clearTimeout(hoverTimer);
+    });
+
+    // Collapse when mouse leaves sidebar
+    sidebar.addEventListener('mouseleave', () => {
+      sidebar.classList.add('collapsed');
+      document.body.classList.remove('chatgpt-outline-open');
+      setContentPadding('');
+      expandBtn.style.display = 'flex';
+    });
+
+    // Drag Logic for Expand Button (for repositioning)
     let isBtnDragging = false;
     let btnStartY, btnStartTop;
-    let isBtnClick = true;
 
     expandBtn.addEventListener('mousedown', (e) => {
       isBtnDragging = true;
-      isBtnClick = true;
       btnStartY = e.clientY;
-      // Get current top value
       const rect = expandBtn.getBoundingClientRect();
       btnStartTop = rect.top;
 
-      // Remove transform centering when starting to drag to rely on absolute top
       if (expandBtn.style.transform) {
         expandBtn.style.transform = 'none';
         expandBtn.style.top = `${btnStartTop}px`;
@@ -125,37 +135,20 @@
       if (!isBtnDragging) return;
 
       const deltaY = e.clientY - btnStartY;
-      if (Math.abs(deltaY) > 3) {
-        isBtnClick = false;
-      }
-
       let newTop = btnStartTop + deltaY;
 
-      // Constraints (keep within window)
       const maxTop = window.innerHeight - expandBtn.offsetHeight;
       if (newTop < 0) newTop = 0;
       if (newTop > maxTop) newTop = maxTop;
 
       expandBtn.style.top = `${newTop}px`;
-      expandBtn.style.transform = 'none'; // Remove centering transform once moved
+      expandBtn.style.transform = 'none';
     });
 
     document.addEventListener('mouseup', () => {
       if (isBtnDragging) {
         isBtnDragging = false;
         expandBtn.style.cursor = '';
-
-        if (isBtnClick) {
-          // It was a click, trigger expand
-          sidebar.classList.remove('collapsed');
-          document.body.classList.add('chatgpt-outline-open');
-
-          // Restore width
-          const currentWidth = sidebar.offsetWidth || 300;
-          setContentPadding(`${currentWidth}px`);
-
-          expandBtn.style.display = 'none';
-        }
       }
     });
 
@@ -202,29 +195,48 @@
       if (role === 'user') {
         currentGroup = document.createElement('div');
         currentGroup.className = 'qa-group';
+        attachGroupClickHandler(currentGroup, node, index);
+
         listContainer.appendChild(currentGroup);
       } else if (!currentGroup) {
         // Fallback for orphan assistant messages (or initial greeting)
         currentGroup = document.createElement('div');
         currentGroup.className = 'qa-group';
+        attachGroupClickHandler(currentGroup, node, index);
+
         listContainer.appendChild(currentGroup);
       }
 
       // Create outline item
       const item = document.createElement('div');
       item.className = `outline-item ${role}-msg`;
-      // Remove Q: / A: prefix as requested for cleaner look, or keep it? 
-      // User asked for "Q and corresponding A compact", implied visual grouping.
-      // Let's keep prefixes but maybe smaller or just rely on styling.
-      // Let's keep them for clarity but maybe simplify.
       item.textContent = `${role === 'user' ? 'Q: ' : 'A: '}${text}`;
 
-      // Click to scroll
-      item.addEventListener('click', () => {
-        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-
       currentGroup.appendChild(item);
+    });
+  }
+
+  function attachGroupClickHandler(groupNode, messageNode, messageIndex) {
+    groupNode.addEventListener('click', (event) => {
+      event.stopPropagation();
+      jumpToMessage(messageNode, messageIndex);
+    });
+  }
+
+  function jumpToMessage(savedNode, fallbackIndex) {
+    let targetNode = savedNode;
+
+    if (!targetNode || !targetNode.isConnected) {
+      const latestNodes = getMessageElements();
+      targetNode = latestNodes[fallbackIndex] || null;
+    }
+
+    if (!targetNode) return;
+
+    targetNode.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest'
     });
   }
 
@@ -250,9 +262,32 @@
       '.ds-markdown'
     ];
 
-    const selectors = location.hostname.includes('deepseek')
+    const geminiSelectors = [
+      '[data-message-id]',
+      '[data-testid="message"]',
+      '[data-utterance-id]',
+      '[role="listitem"] [aria-label*="message"]',
+      '[aria-label*="Message"]',
+      '[aria-label*="chat message"]',
+      '[aria-roledescription="message"]',
+      'c-wiz [data-message-id]',
+      '[data-test-id*="message"]',
+      '[data-test-id*="response"]',
+      'user-query',
+      'assistant-response',
+      'bard-response',
+      'bard-chat-message',
+      '.user-query-container',
+      '.message-content',
+      '.response-content'
+    ];
+
+    const host = location.hostname;
+    const selectors = host.includes('deepseek')
       ? baseSelectors.concat(deepseekSelectors)
-      : baseSelectors;
+      : host.includes('gemini.google')
+        ? baseSelectors.concat(geminiSelectors)
+        : baseSelectors;
 
     const raw = selectors.flatMap((sel) => Array.from(document.querySelectorAll(sel)));
 
@@ -286,8 +321,20 @@
       node.getAttribute('data-chat-role');
 
     const isDeepseek = location.hostname.includes('deepseek');
+    const isGemini = location.hostname.includes('gemini.google');
+
     if (isDeepseek && node.classList?.contains('ds-message')) {
       return node.querySelector('.ds-markdown') ? 'assistant' : 'user';
+    }
+
+    if (isGemini) {
+      const tag = (node.tagName || '').toLowerCase();
+      if (tag === 'user-query' || node.classList.contains('user-query-container')) return 'user';
+      if (tag === 'assistant-response' || tag === 'bard-response' || tag === 'bard-chat-message') return 'assistant';
+
+      const label = (node.getAttribute('aria-label') || '').toLowerCase();
+      if (label.includes('user') || label.includes('you')) return 'user';
+      if (label.includes('gemini') || label.includes('assistant')) return 'assistant';
     }
 
     if (attrRole) {
@@ -311,7 +358,7 @@
     let text = '...';
     const contentNode =
       node.querySelector(
-        '.markdown, .whitespace-pre-wrap, .ds-markdown, .message-content, .fbb737a4'
+        '.markdown, .whitespace-pre-wrap, .ds-markdown, .message-content, .fbb737a4, [data-message-text], [data-utterance-id], .query-text, bard-response, assistant-response'
       ) || node;
 
     if (contentNode) {
@@ -361,70 +408,9 @@
   }
 
   function setContentPadding(value) {
-    const widthVal = value || '';
-    const messageWidthVal = widthVal ? `calc(100% - ${widthVal})` : '';
-    const isDeepseek = location.hostname.includes('deepseek');
-
-    const candidates = [
-      document.body,
-      document.getElementById('root'),
-      document.querySelector('main'),
-      document.querySelector('[role="main"]'),
-      document.querySelector('.conversation-container'),
-      document.querySelector('.chat-body')
-    ].filter(Boolean);
-
-    const structural = [
-      document.querySelector('#root > div'),
-      document.querySelector('#root > div > div')
-    ].filter(Boolean);
-
-    candidates.forEach((el) => {
-      el.style.paddingRight = widthVal;
-      el.style.marginRight = widthVal;
-    });
-
-    const setWidths = (els) => {
-      els.forEach((el) => {
-        if (widthVal) {
-          el.style.width = messageWidthVal;
-          el.style.maxWidth = messageWidthVal;
-          el.style.boxSizing = 'border-box';
-        } else {
-          el.style.width = '';
-          el.style.maxWidth = '';
-          el.style.boxSizing = '';
-        }
-      });
-    };
-
-    setWidths(structural);
-
-    if (isDeepseek) {
-      const deepseekContainers = [
-        document.querySelector('[class*="ds-theme"]'),
-        document.querySelector('[class*="ds-theme"] > div'),
-        document.querySelector('[class*="ds-theme"] > div > div')
-      ].filter(Boolean);
-
-      setWidths(deepseekContainers);
-    }
-
-    document.documentElement.style.setProperty('--chatgpt-outline-width', widthVal);
-    document.documentElement.style.setProperty('--message-area-width', messageWidthVal);
-    document.body.style.setProperty('--chatgpt-outline-width', widthVal);
-
-    const root = document.getElementById('root');
-    if (root) {
-      root.style.setProperty('--chatgpt-outline-width', widthVal);
-      root.style.setProperty('--message-area-width', messageWidthVal);
-    }
-
-    const mainEl = document.querySelector('main') || document.querySelector('[role="main"]');
-    if (mainEl) {
-      mainEl.style.setProperty('--chatgpt-outline-width', widthVal);
-      mainEl.style.setProperty('--message-area-width', messageWidthVal);
-    }
+    // Floating sidebar mode - no content padding needed
+    // Sidebar now floats over content without shifting layout
+    return;
   }
 
 })();
